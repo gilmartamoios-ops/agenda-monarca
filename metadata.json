@@ -1,0 +1,7 @@
+{
+  "name": "Agenda Monarca",
+  "description": "Uma agenda completa com gestão financeira, tarefas por status, cronômetro de meditação (Daimoku) e diário de sabedoria, com design inspirado na cultura japonesa.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
