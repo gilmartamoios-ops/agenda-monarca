@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Transaction } from '../types';
 import { getMarketAnalysis } from '../services/geminiService';
@@ -118,21 +117,13 @@ const Finance: React.FC<FinanceProps> = ({ transactions, categories, setTransact
   };
 
   const handleMarketAnalysis = async () => {
-    if (!(window as any).aistudio?.hasSelectedApiKey()) {
-      await (window as any).aistudio?.openSelectKey();
-      return;
-    }
-    
+    // Correção: Agora chama o serviço diretamente sem depender do IA Studio
     setIsAnalyzing(true);
     try {
       const result = await getMarketAnalysis(stats.investimento);
       setAnalysis(result);
     } catch (e: any) {
-      if (e.message === "API_KEY_NOT_FOUND") {
-        await (window as any).aistudio?.openSelectKey();
-      } else {
-        alert("Erro ao processar a análise estratégica, tente de novo.");
-      }
+      alert("Erro ao processar a análise estratégica. Verifique sua conexão.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -282,97 +273,4 @@ const Finance: React.FC<FinanceProps> = ({ transactions, categories, setTransact
             <h4 className="font-bold text-green-700 dark:text-green-500">Receitas</h4>
             <span className="text-sm font-black text-green-700 dark:text-green-500">R$ {stats.totalIncome.toFixed(2)}</span>
           </div>
-          <div className="space-y-2 max-h-40 overflow-y-auto hide-scrollbar">
-            {Object.entries(stats.catIncome).map(([cat, val]) => (
-              <div key={cat} className="flex justify-between text-[10px] py-1 border-b border-gray-50 dark:border-zinc-800 last:border-0">
-                <span className="text-gray-500 dark:text-zinc-500">{cat}</span>
-                <span className="font-bold text-gray-700 dark:text-zinc-300">R$ {(val as number).toFixed(2)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="bg-white dark:bg-zinc-900 p-4 rounded-3xl border border-gray-100 dark:border-zinc-800 shadow-sm transition-colors">
-          <div className="flex justify-between items-center mb-4">
-            <h4 className="font-bold text-red-700 dark:text-red-500">Despesas</h4>
-            <span className="text-sm font-black text-red-700 dark:text-red-500">R$ {stats.totalExpense.toFixed(2)}</span>
-          </div>
-          <div className="space-y-2 max-h-40 overflow-y-auto hide-scrollbar">
-            {Object.entries(stats.catExpense).map(([cat, val]) => (
-              <div key={cat} className="flex justify-between text-[10px] py-1 border-b border-gray-50 dark:border-zinc-800 last:border-0">
-                <span className="text-gray-500 dark:text-zinc-500">{cat}</span>
-                <span className="font-bold text-gray-700 dark:text-zinc-300">R$ {(val as number).toFixed(2)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-gray-100 dark:border-zinc-800 shadow-sm transition-colors">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-gray-800 dark:text-zinc-100 flex items-center">
-            <span className="mr-2">🤖</span> Consultoria de Investimento AI
-          </h3>
-          <button 
-            onClick={handleMarketAnalysis} 
-            disabled={isAnalyzing}
-            className="text-sm font-bold text-red-700 dark:text-red-400 px-4 py-2 rounded-xl border-2 border-red-700 dark:border-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
-          >
-            {isAnalyzing ? 'Analisando...' : 'Gerar Estratégia'}
-          </button>
-        </div>
-        {analysis ? (
-          <div className="relative bg-gray-50 dark:bg-zinc-950 p-4 pb-14 rounded-2xl text-sm text-gray-700 dark:text-zinc-300 leading-relaxed border-l-4 border-red-700 dark:border-red-900 whitespace-pre-wrap shadow-inner">
-            {analysis}
-            <button 
-              onClick={handleShareAnalysis}
-              className="absolute bottom-3 right-3 flex items-center gap-2 px-4 py-2.5 bg-red-700 dark:bg-red-900 text-white rounded-xl text-xs font-black shadow-lg hover:opacity-90 transition-all border border-white/20"
-            >
-              <span>COMPARTILHAR</span>
-              <span className="text-lg">📤</span>
-            </button>
-          </div>
-        ) : (
-          <p className="text-xs text-gray-400 dark:text-zinc-600 text-center py-4">Clique acima para ver onde aplicar os R$ {stats.investimento.toFixed(2)} com base no mercado atual.</p>
-        )}
-      </div>
-
-      <div className="space-y-3 pb-8">
-        <h3 className="font-bold text-gray-800 dark:text-zinc-100 ml-2">Lançamentos no Período</h3>
-        {stats.sorted.map(t => (
-          <div key={t.id} className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm flex items-center justify-between group relative transition-colors">
-            <div className="flex items-center space-x-4">
-              <div className={`p-2 rounded-xl ${t.type === 'receita' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'}`}>
-                {t.type === 'receita' ? '⬆️' : '⬇️'}
-              </div>
-              <div>
-                <div className="font-bold text-gray-800 dark:text-zinc-200">{t.description}</div>
-                <div className="text-[10px] text-gray-400 dark:text-zinc-500 uppercase font-bold">{t.category} • {new Date(t.date + "T12:00:00").toLocaleDateString()}</div>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className={`font-black ${t.type === 'receita' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                {t.type === 'receita' ? '+' : '-'} R$ {t.amount.toFixed(2)}
-              </div>
-              <div className="relative">
-                <button 
-                  onClick={() => setOpenDropdownId(openDropdownId === t.id ? null : t.id)}
-                  className="p-1 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-lg dark:text-zinc-400"
-                >
-                  ⋮
-                </button>
-                {openDropdownId === t.id && (
-                  <div className="absolute right-0 top-full mt-2 w-32 bg-white dark:bg-zinc-800 rounded-xl shadow-2xl border border-gray-100 dark:border-zinc-700 z-50 overflow-hidden ring-1 ring-black/5">
-                    <button onClick={() => handleEdit(t)} className="w-full p-3 text-left text-sm font-medium hover:bg-gray-50 dark:hover:bg-zinc-700 border-b border-gray-50 dark:border-zinc-700 text-gray-700 dark:text-zinc-300">✏️ Editar</button>
-                    <button onClick={() => handleDelete(t.id)} className="w-full p-3 text-left text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30">🗑️ Excluir</button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-export default Finance;
+          <div className="space-y-2
