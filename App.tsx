@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { AppState } from './types';
 import Agenda from './components/Agenda';
@@ -6,6 +5,8 @@ import Finance from './components/Finance';
 import Tasks from './components/Tasks';
 import Monarca from './components/Monarca';
 import DailyNotes from './components/DailyNotes';
+import { db } from './services/firebase'; // Importando a conexão que criamos
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 
 const PalaceIcon = () => (
   <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
@@ -17,37 +18,48 @@ const PalaceIcon = () => (
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'agenda' | 'finance' | 'tasks' | 'monarca' | 'notes'>('agenda');
-  const [state, setState] = useState<AppState>(() => {
-    const saved = localStorage.getItem('monarca_v1');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (!parsed.dailyNotes) parsed.dailyNotes = [];
-      if (parsed.isDarkMode === undefined) parsed.isDarkMode = false;
-      return parsed;
-    }
-    return {
-      appointments: [],
-      transactions: [],
-      tasks: [],
-      notes: [],
-      dailyNotes: [],
-      objectives: [],
-      sessions: [],
-      financeCategories: ['Alimentação', 'Transporte', 'Saúde', 'Moradia', 'Educação'],
-      taskStands: ['A Fazer', 'Em Andamento', 'Concluído'],
-      isDarkMode: false,
-      timerState: { isRunning: false, startTime: null, elapsedBeforeStart: 0 }
-    };
+  const [loading, setLoading] = useState(true);
+  const [state, setState] = useState<AppState>({
+    appointments: [],
+    transactions: [],
+    tasks: [],
+    notes: [],
+    dailyNotes: [],
+    objectives: [],
+    sessions: [],
+    financeCategories: ['Alimentação', 'Transporte', 'Saúde', 'Moradia', 'Educação'],
+    taskStands: ['A Fazer', 'Em Andamento', 'Concluído'],
+    isDarkMode: false,
+    timerState: { isRunning: false, startTime: null, elapsedBeforeStart: 0 }
   });
 
+  // ESCUTA EM TEMPO REAL (Sincronização Rigorosa entre PC e Xiaomi)
   useEffect(() => {
-    localStorage.setItem('monarca_v1', JSON.stringify(state));
-    if (state.isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+    const docRef = doc(db, 'users', 'gilmar_perfil'); // ID fixo para seu uso pessoal
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data() as AppState;
+        setState(data);
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // SALVAMENTO AUTOMÁTICO
+  useEffect(() => {
+    if (!loading) {
+      const docRef = doc(db, 'users', 'gilmar_perfil');
+      setDoc(docRef, state);
+      
+      // Manter a funcionalidade do Dark Mode no sistema
+      if (state.isDarkMode) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
     }
-  }, [state]);
+  }, [state, loading]);
 
   const updateState = (updates: Partial<AppState>) => {
     setState(prev => ({ ...prev, ...updates }));
@@ -56,6 +68,10 @@ const App: React.FC = () => {
   const toggleDarkMode = () => {
     updateState({ isDarkMode: !state.isDarkMode });
   };
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black text-red-700 font-bold">Carregando Agenda Monarca...</div>;
+  }
 
   return (
     <div className={`min-h-screen flex flex-col max-w-lg mx-auto transition-colors duration-300 ${state.isDarkMode ? 'bg-black border-zinc-800' : 'bg-white border-gray-200'} border-x`}>
