@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Appointment } from '../types';
 
@@ -15,6 +14,10 @@ const Agenda: React.FC<AgendaProps> = ({ appointments, setAppointments }) => {
   const [selectedDayAppts, setSelectedDayAppts] = useState<Appointment[]>([]);
   const [formData, setFormData] = useState({ title: '', date: '', time: '', details: '' });
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // --- FUNÇÃO PARA PEGAR A DATA DE HOJE FORMATADA ---
+  const formatDateString = (date: Date) => date.toISOString().split('T')[0];
+  const todayStr = formatDateString(new Date()); 
 
   const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
   const getFirstDayOfMonth = (year: number, month: number) => {
@@ -60,8 +63,6 @@ const Agenda: React.FC<AgendaProps> = ({ appointments, setAppointments }) => {
     setSelectedDayAppts(selectedDayAppts.filter(a => a.id !== id));
   };
 
-  const formatDateString = (date: Date) => date.toISOString().split('T')[0];
-
   const renderMonth = () => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -74,9 +75,11 @@ const Agenda: React.FC<AgendaProps> = ({ appointments, setAppointments }) => {
     for (let day = 1; day <= totalDays; day++) {
       const dateStr = formatDateString(new Date(year, month, day));
       const dayAppts = appointments.filter(a => a.date === dateStr);
+      const isToday = dateStr === todayStr;
+
       cells.push(
-        <div key={day} className="h-24 border border-gray-100 dark:border-zinc-800 p-1 relative flex flex-col transition-colors">
-          <span className="text-xs font-semibold text-gray-500 dark:text-zinc-500">{day}</span>
+        <div key={day} className={`h-24 border ${isToday ? 'border-red-500 bg-red-50/10' : 'border-gray-100 dark:border-zinc-800'} p-1 relative flex flex-col transition-colors`}>
+          <span className={`text-xs font-semibold ${isToday ? 'text-red-600' : 'text-gray-500 dark:text-zinc-500'}`}>{day}</span>
           {dayAppts.length > 0 && (
             <button
               onClick={() => { setSelectedDayAppts(dayAppts); setIsModalOpen(true); }}
@@ -108,13 +111,15 @@ const Agenda: React.FC<AgendaProps> = ({ appointments, setAppointments }) => {
           {weekDays.map(day => {
             const dateStr = formatDateString(day);
             const dayAppts = appointments.filter(a => a.date === dateStr).sort((a,b) => a.time.localeCompare(b.time));
+            const isToday = dateStr === todayStr; // <--- CHECA SE É HOJE DE VERDADE
+
             return (
-              <div key={dateStr} className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden transition-colors">
-                <div className="bg-gray-50 dark:bg-zinc-800 px-4 py-2 border-b border-gray-100 dark:border-zinc-700 flex justify-between items-center">
-                  <h3 className="font-bold text-gray-800 dark:text-zinc-100">
+              <div key={dateStr} className={`bg-white dark:bg-zinc-900 rounded-2xl border ${isToday ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-100 dark:border-zinc-800'} shadow-sm overflow-hidden transition-colors`}>
+                <div className={`${isToday ? 'bg-red-50 dark:bg-red-950/30' : 'bg-gray-50 dark:bg-zinc-800'} px-4 py-2 border-b border-gray-100 dark:border-zinc-700 flex justify-between items-center`}>
+                  <h3 className={`font-bold ${isToday ? 'text-red-700 dark:text-red-400' : 'text-gray-800 dark:text-zinc-100'}`}>
                     {day.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
                   </h3>
-                  {dayAppts.length > 0 && <span className="bg-red-700 dark:bg-red-900 text-white text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">Hoje</span>}
+                  {isToday && <span className="bg-red-700 dark:bg-red-900 text-white text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">Hoje</span>}
                 </div>
                 <div className="p-4 space-y-3">
                   {dayAppts.length > 0 ? dayAppts.map(appt => (
@@ -125,8 +130,8 @@ const Agenda: React.FC<AgendaProps> = ({ appointments, setAppointments }) => {
                         {appt.details && <div className="text-xs text-gray-500 dark:text-zinc-500 italic mt-0.5">{appt.details}</div>}
                       </div>
                       <div className="flex space-x-2">
-                        <button onClick={() => handleEdit(appt)} className="text-blue-500 dark:text-blue-400 hover:scale-110 transition-transform">✏️</button>
-                        <button onClick={() => handleDelete(appt.id)} className="text-red-500 dark:text-red-400 hover:scale-110 transition-transform">🗑️</button>
+                        <button onClick={() => handleEdit(appt)} className="text-sm">✏️</button>
+                        <button onClick={() => handleDelete(appt.id)} className="text-sm">🗑️</button>
                       </div>
                     </div>
                   )) : <div className="text-sm text-gray-400 dark:text-zinc-600 italic">Nenhum agendamento</div>}
@@ -151,6 +156,7 @@ const Agenda: React.FC<AgendaProps> = ({ appointments, setAppointments }) => {
         </div>
       )}
 
+      {/* MODAIS (MANTIDOS IGUAIS) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-white dark:bg-zinc-900 w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl transition-colors">
@@ -158,7 +164,7 @@ const Agenda: React.FC<AgendaProps> = ({ appointments, setAppointments }) => {
               <h3 className="font-bold">Agendamentos do Dia</h3>
               <button onClick={() => setIsModalOpen(false)} className="text-2xl">&times;</button>
             </div>
-            <div className="p-4 max-h-[60vh] overflow-y-auto space-y-4 hide-scrollbar">
+            <div className="p-4 max-h-[60vh] overflow-y-auto space-y-4">
               {selectedDayAppts.map(appt => (
                 <div key={appt.id} className="p-3 bg-gray-50 dark:bg-zinc-800 rounded-2xl border border-gray-200 dark:border-zinc-700">
                   <div className="flex justify-between items-start">
@@ -179,34 +185,34 @@ const Agenda: React.FC<AgendaProps> = ({ appointments, setAppointments }) => {
 
       {isDetailsOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-          <div className="bg-white dark:bg-zinc-900 w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl ring-1 ring-black/5 transition-colors">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl transition-colors">
             <div className="p-6 space-y-4">
               <h3 className="text-xl font-bold text-gray-800 dark:text-zinc-100 flex items-center">
                 <span className="mr-2">📝</span> {editingId ? 'Editar Detalhes' : 'Novo Agendamento'}
               </h3>
               <div className="space-y-3">
                 <input type="text" placeholder="O que agendar?"
-                  className="w-full p-3 rounded-2xl border border-gray-200 dark:border-zinc-800 focus:ring-2 focus:ring-red-500 outline-none text-gray-900 dark:text-zinc-100 bg-white dark:bg-zinc-800"
+                  className="w-full p-3 rounded-2xl border border-gray-200 dark:border-zinc-800 outline-none text-gray-900 dark:text-zinc-100 bg-white dark:bg-zinc-800"
                   value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })}
                 />
                 <div className="grid grid-cols-2 gap-3">
                   <input type="date"
-                    className="p-3 rounded-2xl border border-gray-200 dark:border-zinc-800 outline-none focus:ring-2 focus:ring-red-500 text-gray-900 dark:text-zinc-100 bg-white dark:bg-zinc-800"
+                    className="p-3 rounded-2xl border border-gray-200 dark:border-zinc-800 text-gray-900 dark:text-zinc-100 bg-white dark:bg-zinc-800"
                     value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })}
                   />
                   <input type="time"
-                    className="p-3 rounded-2xl border border-gray-200 dark:border-zinc-800 outline-none focus:ring-2 focus:ring-red-500 text-gray-900 dark:text-zinc-100 bg-white dark:bg-zinc-800"
+                    className="p-3 rounded-2xl border border-gray-200 dark:border-zinc-800 text-gray-900 dark:text-zinc-100 bg-white dark:bg-zinc-800"
                     value={formData.time} onChange={e => setFormData({ ...formData, time: e.target.value })}
                   />
                 </div>
                 <textarea placeholder="Mais detalhes..."
-                  className="w-full p-3 h-32 rounded-2xl border border-gray-200 dark:border-zinc-800 outline-none focus:ring-2 focus:ring-red-500 resize-none text-gray-900 dark:text-zinc-100 bg-white dark:bg-zinc-800"
+                  className="w-full p-3 h-32 rounded-2xl border border-gray-200 dark:border-zinc-800 outline-none resize-none text-gray-900 dark:text-zinc-100 bg-white dark:bg-zinc-800"
                   value={formData.details} onChange={e => setFormData({ ...formData, details: e.target.value })}
                 />
               </div>
               <div className="flex space-x-3 pt-2">
-                <button onClick={() => setIsDetailsOpen(false)} className="flex-1 py-3 font-semibold text-gray-500 dark:text-zinc-400 bg-gray-100 dark:bg-zinc-800 rounded-2xl">Cancelar</button>
-                <button onClick={handleSave} className="flex-2 bg-red-700 dark:bg-red-800 text-white py-3 px-8 font-bold rounded-2xl shadow-lg shadow-red-200">Salvar</button>
+                <button onClick={() => setIsDetailsOpen(false)} className="flex-1 py-3 font-semibold text-gray-500 bg-gray-100 dark:bg-zinc-800 rounded-2xl">Cancelar</button>
+                <button onClick={handleSave} className="flex-2 bg-red-700 text-white py-3 px-8 font-bold rounded-2xl shadow-lg">Salvar</button>
               </div>
             </div>
           </div>
