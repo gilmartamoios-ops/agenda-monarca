@@ -1,7 +1,15 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Trash2, Edit3, Printer, TrendingUp, Settings, Save, X, Calendar, Search, ArrowUpCircle, ArrowDownCircle, Wallet } from 'lucide-react';
+import { 
+  Trash2, Edit3, Printer, TrendingUp, Settings, Save, X, 
+  Calendar, Search, ArrowUpCircle, ArrowDownCircle, Wallet, History 
+} from 'lucide-react';
 
+/**
+ * COMPONENTE FINANCE MONARCA - VERSÃO AUDITORIA BANCÁRIA
+ * Foco: Balanço por contas individuais e fluxo de caixa.
+ */
 const Finance = ({ transactions, setTransactions, categories, setCategories }: any) => {
+  // Estado do Formulário
   const [formData, setFormData] = useState({ 
     description: '', 
     amount: '', 
@@ -10,42 +18,64 @@ const Finance = ({ transactions, setTransactions, categories, setCategories }: a
     date: new Date().toISOString().split('T')[0] 
   });
   
+  // Estados de Controle de Interface
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [showCatManager, setShowCatManager] = useState(false);
   const [newCat, setNewCat] = useState('');
 
-  // CONTROLE DE AUDITORIA (Início e Fim do Período)
+  // AUDITORIA DE PERÍODO (Início e Fim)
   const [dateStart, setDateStart] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]);
   const [dateEnd, setDateEnd] = useState(new Date().toISOString().split('T')[0]);
 
-  // Lógica de filtragem por intervalo de datas
+  // Filtro de Transações por Data
   const filteredTransactions = useMemo(() => {
     return transactions.filter((t: any) => {
       return t.date >= dateStart && t.date <= dateEnd;
     }).sort((a: any, b: any) => b.date.localeCompare(a.date));
   }, [transactions, dateStart, dateEnd]);
+  // Função para transformar links de texto em links clicáveis
   const renderLinks = (text: string) => {
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     return text.split(urlRegex).map((part, i) => {
       if (part.match(urlRegex)) {
-        return <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline break-all font-bold" onClick={(e) => e.stopPropagation()}>{part}</a>;
+        return (
+          <a 
+            key={i} 
+            href={part} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="text-blue-600 underline break-all font-bold" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            {part}
+          </a>
+        );
       }
       return part;
     });
   };
 
+  // MOTOR ESTRATÉGICO: Cálculos de Saldo e Auditoria por Conta
   const stats = useMemo(() => {
-    const income = filteredTransactions.filter((t: any) => t.type === 'receita').reduce((sum: number, t: any) => sum + t.amount, 0);
-    const expense = filteredTransactions.filter((t: any) => t.type === 'despesa').reduce((sum: number, t: any) => sum + t.amount, 0);
+    // Totais do Período Selecionado
+    const income = filteredTransactions
+      .filter((t: any) => t.type === 'receita')
+      .reduce((sum: number, t: any) => sum + t.amount, 0);
+      
+    const expense = filteredTransactions
+      .filter((t: any) => t.type === 'despesa')
+      .reduce((sum: number, t: any) => sum + t.amount, 0);
+      
     const saldo1 = income - expense;
     
+    // Regra de Alocação Monarca (20% Invest, 15% Lazer, 15% Emergencial)
     const invest = saldo1 > 0 ? saldo1 * 0.20 : 0;
     const lazer = saldo1 > 0 ? saldo1 * 0.15 : 0;
     const emergencial = saldo1 > 0 ? saldo1 * 0.15 : 0;
     const saldo2 = saldo1 - (invest + lazer + emergencial);
     
-    // NOVO: Cálculo de Balanço Individual por Conta (Total Acumulado)
+    // NOVO: BALANÇO INDIVIDUAL POR CONTA (Status Real de cada Ativo)
     const accountStats = transactions.reduce((acc: any, t: any) => {
       if (!acc[t.category]) acc[t.category] = { income: 0, expense: 0, balance: 0 };
       if (t.type === 'receita') acc[t.category].income += t.amount;
@@ -54,15 +84,24 @@ const Finance = ({ transactions, setTransactions, categories, setCategories }: a
       return acc;
     }, {});
 
-    const expenseCatTotals = filteredTransactions.filter((t: any) => t.type === 'despesa').reduce((acc: any, t: any) => {
-      acc[t.category] = (acc[t.category] || 0) + t.amount; return acc;
-    }, {});
+    // Totais por Categoria de Despesa (Gráfico Mental)
+    const expenseCatTotals = filteredTransactions
+      .filter((t: any) => t.type === 'despesa')
+      .reduce((acc: any, t: any) => {
+        acc[t.category] = (acc[t.category] || 0) + t.amount; 
+        return acc;
+      }, {});
 
-    return { income, expense, saldo1, saldo2, invest, lazer, emergencial, expenseCatTotals, accountStats };
+    return { 
+      income, expense, saldo1, saldo2, 
+      invest, lazer, emergencial, 
+      expenseCatTotals, accountStats 
+    };
   }, [filteredTransactions, transactions]);
   return (
-    <div className="space-y-6 pb-24">
-      {/* 1. SELETOR DE AUDITORIA DE PERÍODO */}
+    <div className="space-y-6 pb-24 animate-in fade-in">
+      
+      {/* 1. SELETOR DE AUDITORIA DE PERÍODO ESPECÍFICO */}
       <div className="bg-white dark:bg-zinc-900 p-4 rounded-[30px] border dark:border-zinc-800 shadow-sm no-print space-y-3">
         <div className="flex items-center gap-2 text-[10px] font-black uppercase text-red-700 tracking-widest px-2">
           <Search size={14}/> Auditoria de Período
@@ -90,9 +129,9 @@ const Finance = ({ transactions, setTransactions, categories, setCategories }: a
 
         {/* Gerenciador de Contas/Categorias */}
         {showCatManager && (
-          <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-3xl border-2 border-dashed border-zinc-200 animate-in fade-in">
+          <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-3xl border-2 border-dashed border-zinc-200">
             <div className="flex gap-2 mb-4">
-              <input type="text" placeholder="Nova Conta (Ex: Binance, Nubank)..." className="flex-1 p-3 rounded-xl text-xs font-bold text-zinc-900 dark:bg-zinc-900 dark:text-white" value={newCat} onChange={e => setNewCat(e.target.value)} />
+              <input type="text" placeholder="Nova Conta..." className="flex-1 p-3 rounded-xl text-xs font-bold text-zinc-900 dark:bg-zinc-900 dark:text-white" value={newCat} onChange={e => setNewCat(e.target.value)} />
               <button onClick={() => { if(newCat) { setCategories([...categories, newCat]); setNewCat(''); } }} className="bg-zinc-900 text-white px-5 rounded-xl font-black">+</button>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -105,7 +144,7 @@ const Finance = ({ transactions, setTransactions, categories, setCategories }: a
           </div>
         )}
 
-        {/* Seletor de Tipo (Receita/Despesa) */}
+        {/* Seletor de Tipo (Entrada/Saída) */}
         <div className="flex bg-gray-100 dark:bg-zinc-800 rounded-2xl p-1">
           <button onClick={() => setFormData({...formData, type: 'receita'})} className={`flex-1 py-3 rounded-xl text-[10px] font-black transition-all flex items-center justify-center gap-2 ${formData.type === 'receita' ? 'bg-green-600 text-white shadow-lg' : 'text-zinc-400'}`}>
             <ArrowUpCircle size={14}/> ENTRADA
@@ -137,15 +176,16 @@ const Finance = ({ transactions, setTransactions, categories, setCategories }: a
           }
           setFormData({ description: '', amount: '', type: 'despesa', category: 'Depósito em Conta', date: new Date().toISOString().split('T')[0] });
         }} className="w-full bg-zinc-900 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-all">
-          {editingId ? 'ATUALIZAR REGISTRO' : 'CONFIRMAR NO BANCO'}
+          {editingId ? 'ATUALIZAR REGISTRO' : 'CONFIRMAR OPERAÇÃO'}
         </button>
       </div>
-      {/* 3. RESUMO DE SALDOS TOTAIS */}
+
+      {/* 3. RESUMO DE SALDOS TOTAIS (Xiaomi Ready) */}
       <div className="bg-zinc-900 rounded-[40px] p-8 text-white shadow-2xl border-b-8 border-red-700 no-print">
         <div className="flex justify-between items-start">
           <div className="space-y-4">
             <div>
-              <div className="text-[10px] uppercase opacity-40 font-black mb-1">Saldo 1 (Auditoria Período)</div>
+              <div className="text-[10px] uppercase opacity-40 font-black mb-1">Saldo 1 (Período)</div>
               <div className="text-4xl font-black italic">R$ {stats.saldo1.toFixed(2)}</div>
             </div>
             <div>
@@ -153,17 +193,10 @@ const Finance = ({ transactions, setTransactions, categories, setCategories }: a
               <div className="text-2xl font-black text-blue-400 italic">R$ {stats.saldo2.toFixed(2)}</div>
             </div>
           </div>
-          <button 
-            onClick={() => setShowPreview(true)} 
-            className="bg-blue-600 w-16 h-16 rounded-2xl flex flex-col items-center justify-center gap-1 active:scale-95 shadow-lg hover:bg-blue-500 transition-colors"
-          >
-            <TrendingUp size={20}/>
-            <span className="text-[8px] font-black uppercase tracking-tighter">Corretor</span>
-          </button>
+          <button onClick={() => setShowPreview(true)} className="bg-blue-600 w-16 h-16 rounded-2xl flex flex-col items-center justify-center gap-1 active:scale-95 shadow-lg"><TrendingUp size={20}/><span className="text-[8px] font-black uppercase tracking-tighter">Corretor</span></button>
         </div>
       </div>
-
-      {/* 4. LISTAGEM DE MOVIMENTAÇÕES */}
+      {/* 4. LISTAGEM DE MOVIMENTAÇÕES (HISTÓRICO) */}
       <div className="bg-white dark:bg-zinc-900 rounded-[35px] overflow-hidden shadow-sm border dark:border-zinc-800">
         <div className="p-5 border-b dark:border-zinc-800 text-[10px] font-black uppercase text-gray-400 tracking-widest flex items-center gap-2">
           <History size={14}/> Movimentações do Período
@@ -187,12 +220,12 @@ const Finance = ({ transactions, setTransactions, categories, setCategories }: a
             </div>
           ))}
           {filteredTransactions.length === 0 && (
-            <div className="p-10 text-center text-zinc-400 text-[10px] font-black uppercase tracking-widest italic">Nenhum registro neste período</div>
+            <div className="p-10 text-center text-zinc-400 text-[10px] font-black uppercase tracking-widest italic">Nenhum registro no período</div>
           )}
         </div>
       </div>
 
-      {/* 5. MODAL DO CORRETOR (ESTRATÉGICO E BALANÇO POR CONTA) */}
+      {/* 5. MODAL DO CORRETOR (BALANÇO ESTRATÉGICO POR CONTA) */}
       {showPreview && (
         <div className="fixed inset-0 bg-black/95 z-[100] flex flex-col no-print animate-in fade-in">
           <div className="p-4 bg-zinc-100 flex justify-between items-center sticky top-0 shadow-xl">
@@ -200,21 +233,21 @@ const Finance = ({ transactions, setTransactions, categories, setCategories }: a
                <button onClick={() => setShowPreview(false)} className="bg-zinc-900 text-white px-6 py-4 rounded-2xl text-[10px] font-black uppercase active:scale-90">✕ FECHAR</button>
                <button onClick={() => window.print()} className="bg-blue-600 text-white px-6 py-4 rounded-2xl text-[10px] font-black uppercase active:scale-90 flex items-center gap-2"><Printer size={16}/> PDF</button>
             </div>
-            <span className="text-[10px] font-black text-zinc-400 tracking-widest pr-4 italic uppercase">Análise Estratégica</span>
+            <span className="text-[10px] font-black text-zinc-400 tracking-widest pr-4 italic uppercase">Gestão Monarca</span>
           </div>
 
-          <div className="bg-white flex-1 overflow-y-auto p-10 text-zinc-900 font-serif print:p-0">
+          <div className="bg-white flex-1 overflow-y-auto p-10 text-zinc-900 font-serif">
              <div className="text-center border-b-4 border-black pb-8 mb-8">
-                <h1 className="text-2xl font-black uppercase italic tracking-tighter">Balanço de Auditoria Monarca</h1>
-                <p className="text-[10px] font-black uppercase mt-2">Intervalo: {dateStart.split('-').reverse().join('/')} até {dateEnd.split('-').reverse().join('/')}</p>
+                <h1 className="text-2xl font-black uppercase italic tracking-tighter">Balanço de Auditoria Estratégica</h1>
+                <p className="text-[10px] font-black uppercase mt-2">Período: {dateStart.split('-').reverse().join('/')} até {dateEnd.split('-').reverse().join('/')}</p>
              </div>
 
-             {/* BLOCO DE SALDOS POR CONTA INDIVIDUAL (O FIO QUE ESTAVA SOLTO) */}
+             {/* RESUMO POR CONTA INDIVIDUAL (RESOLVE O FIO SOLTO) */}
              <div className="mb-10">
-                <h4 className="text-[10px] font-black uppercase mb-4 text-red-700 tracking-[0.3em] border-b pb-2">Status Individual por Conta (Total Acumulado)</h4>
+                <h4 className="text-[10px] font-black uppercase mb-4 text-red-700 tracking-[0.3em] border-b pb-2">Posição Atual por Conta (Saldo Acumulado)</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {Object.entries(stats.accountStats).map(([account, data]: any) => (
-                    <div key={account} className="p-4 bg-zinc-50 border rounded-2xl flex justify-between items-center">
+                    <div key={account} className="p-4 bg-zinc-50 border rounded-2xl flex justify-between items-center shadow-sm">
                       <div>
                         <p className="text-[9px] font-black uppercase text-zinc-400">{account}</p>
                         <p className={`text-lg font-black ${data.balance >= 0 ? 'text-green-700' : 'text-red-700'}`}>R$ {data.balance.toFixed(2)}</p>
@@ -229,22 +262,21 @@ const Finance = ({ transactions, setTransactions, categories, setCategories }: a
              </div>
 
              <div className="grid grid-cols-2 gap-4 mb-8">
-                <div className="p-6 bg-zinc-50 rounded-3xl border"><p className="text-[9px] font-black uppercase text-zinc-400 mb-2 tracking-widest">Saldo Líquido (Período)</p><p className="text-2xl font-black italic">R$ {stats.saldo1.toFixed(2)}</p></div>
-                <div className="p-6 bg-blue-50 border-blue-100 rounded-3xl border"><p className="text-[9px] font-black uppercase text-blue-400 mb-2 tracking-widest">Disponível Real (Período)</p><p className="text-2xl font-black italic text-blue-800">R$ {stats.saldo2.toFixed(2)}</p></div>
+                <div className="p-6 bg-zinc-50 rounded-3xl border"><p className="text-[9px] font-black uppercase text-zinc-400 mb-2">Saldo Líquido (Período)</p><p className="text-2xl font-black italic">R$ {stats.saldo1.toFixed(2)}</p></div>
+                <div className="p-6 bg-blue-50 border-blue-100 rounded-3xl border"><p className="text-[9px] font-black uppercase text-blue-400 mb-2">Disponível Real (Período)</p><p className="text-2xl font-black italic text-blue-800">R$ {stats.saldo2.toFixed(2)}</p></div>
              </div>
 
              <div className="grid grid-cols-3 gap-2 text-center mb-10">
-                <div className="p-3 border rounded-2xl"><p className="text-[8px] font-black text-zinc-400 uppercase">Reserva Lazer</p><p className="text-xs font-bold text-orange-600">R$ {stats.lazer.toFixed(2)}</p></div>
-                <div className="p-3 border rounded-2xl"><p className="text-[8px] font-black text-zinc-400 uppercase">Reserva Emerg.</p><p className="text-xs font-bold text-blue-600">R$ {stats.emergencial.toFixed(2)}</p></div>
-                <div className="p-3 border rounded-2xl"><p className="text-[8px] font-black text-zinc-400 uppercase">Investimentos</p><p className="text-xs font-bold text-green-600">R$ {stats.invest.toFixed(2)}</p></div>
+                <div className="p-3 border rounded-2xl"><p className="text-[8px] font-black text-zinc-400 uppercase">Lazer (15%)</p><p className="text-xs font-bold text-orange-600">R$ {stats.lazer.toFixed(2)}</p></div>
+                <div className="p-3 border rounded-2xl"><p className="text-[8px] font-black text-zinc-400 uppercase">Emerg. (15%)</p><p className="text-xs font-bold text-blue-600">R$ {stats.emergencial.toFixed(2)}</p></div>
+                <div className="p-3 border rounded-2xl"><p className="text-[8px] font-black text-zinc-400 uppercase">Invest. (20%)</p><p className="text-xs font-bold text-green-600">R$ {stats.invest.toFixed(2)}</p></div>
              </div>
 
-             <div className="p-8 bg-zinc-900 text-white rounded-[40px] border-l-[10px] border-red-700 italic text-sm leading-relaxed whitespace-pre-wrap print:bg-zinc-100 print:text-zinc-900 print:border-black">
-                --- PARECER DO CORRETOR ESTRATÉGICO ---
-                VALOR PARA NOVAS ALOCAÇÕES: R$ {stats.invest.toFixed(2)}
+             <div className="p-8 bg-zinc-900 text-white rounded-[40px] border-l-[10px] border-red-700 italic text-sm leading-relaxed whitespace-pre-wrap">
+                --- PARECER DO CORRETOR MONARCA ---
+                VALOR ESTIMADO PARA APORTE: R$ {stats.invest.toFixed(2)}
 
-                Auditoria concluída com base no fluxo de caixa individual. 
-                Mantenha a proporção de 20% para aportes em ativos de valor (Metais/Cripto).
+                Auditoria finalizada com sucesso. Este balanço separa as receitas por contas individuais, permitindo análise granular de entradas e saídas.
              </div>
           </div>
         </div>
