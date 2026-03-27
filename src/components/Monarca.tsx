@@ -5,17 +5,9 @@ import {
   Lock, BarChart3, ChevronRight 
 } from 'lucide-react';
 
-/**
- * COMPONENTE MONARCA MASTER - 2026
- * Integrado ao Firebase através do App.tsx
- */
 const Monarca = ({ 
-  notes = [], 
-  objectives = [], 
-  sessions = [], 
-  setNotes, 
-  setObjectives, 
-  setSessions 
+  notes = [], objectives = [], sessions = [], 
+  setNotes, setObjectives, setSessions 
 }: any) => {
   
   // --- SEGURANÇA CONTRA DADOS NULOS ---
@@ -23,10 +15,43 @@ const Monarca = ({
   const safeObjectives = useMemo(() => Array.isArray(objectives) ? objectives : [], [objectives]);
   const safeNotes = useMemo(() => Array.isArray(notes) ? notes : [], [notes]);
 
-  // --- ESTADOS DO CRONÔMETRO ---
-  const [seconds, setSeconds] = useState(0);
-  const [isActive, setIsActive] = useState(false);
-  const timerRef = useRef<any>(null);
+  // --- ESTADOS DO CRONÔMETRO COM PERSISTÊNCIA (ANTI-RESET) ---
+  const [seconds, setSeconds] = useState(() => {
+    const saved = localStorage.getItem('monarca_seconds');
+    return saved ? parseInt(saved, 10) : 0;
+  });
+  
+  const [isActive, setIsActive] = useState(() => {
+    return localStorage.getItem('monarca_isActive') === 'true';
+  });
+
+  const [startTime, setStartTime] = useState(() => {
+    const saved = localStorage.getItem('monarca_startTime');
+    return saved ? parseInt(saved, 10) : null;
+  });
+
+  // Salva o estado sempre que mudar
+  useEffect(() => {
+    localStorage.setItem('monarca_seconds', seconds.toString());
+    localStorage.setItem('monarca_isActive', isActive.toString());
+    if (startTime) localStorage.setItem('monarca_startTime', startTime.toString());
+    else localStorage.removeItem('monarca_startTime');
+  }, [seconds, isActive, startTime]);
+
+  // Lógica para recuperar tempo perdido ao minimizar/remover da aba
+  useEffect(() => {
+    let interval: any;
+    if (isActive && startTime) {
+      interval = setInterval(() => {
+        const now = Date.now();
+        const elapsedSinceStart = Math.floor((now - startTime) / 1000);
+        setSeconds(elapsedSinceStart);
+      }, 1000);
+    } else {
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [isActive, startTime]);
 
   // --- ESTADOS DE INTERFACE ---
   const [isFocusMode, setIsFocusMode] = useState(false);
@@ -93,70 +118,68 @@ const Monarca = ({
       history: historyOrdenado
     };
   }, [safeSessions]);
+  // --- ESTADOS DE EDIÇÃO ---
+  const [newObj, setNewObj] = useState('');
+  const [editingObjId, setEditingObjId] = useState<string | null>(null);
+  const [diarioContent, setDiarioContent] = useState('');
+  const [editingDiarioId, setEditingDiarioId] = useState<string | null>(null);
 
-  // --- CONTROLE DO CRONÔMETRO ---
-  useEffect(() => {
-    let interval: any;
-    if (isActive) interval = setInterval(() => setSeconds(s => s + 1), 1000);
-    else clearInterval(interval);
-    return () => clearInterval(interval);
-  }, [isActive]);
-  return (
-    <div className="space-y-6 pb-24 animate-in fade-in max-w-full overflow-hidden">
-      
-      {/* 1. PAINEL DO RELÓGIO */}
-      <div className="bg-zinc-900 p-8 sm:p-12 rounded-[50px] text-center border-b-8 border-red-700 shadow-2xl flex flex-col items-center">
-        <div className="bg-red-700/20 text-red-500 px-4 py-2 rounded-full text-[10px] font-black uppercase mb-4 border border-red-700/30">
-          {stats.mesNome}: {stats.mensal}
-        </div>
-        <div className="py-6">
-          <span className="text-6xl sm:text-8xl font-black text-white font-mono tracking-tighter italic leading-none drop-shadow-2xl">
-            {sToT(seconds)}
-          </span>
-        </div>
-        <div className="grid grid-cols-2 gap-4 w-full mt-6">
-          <button onClick={() => setIsActive(!isActive)} className={`py-6 rounded-3xl font-black text-xs uppercase shadow-xl active:scale-95 transition-all ${isActive ? 'bg-orange-600' : 'bg-green-700'} text-white`}>
-            {isActive ? 'PAUSAR' : 'INICIAR'}
-          </button>
-          <button onClick={() => { 
-            if(seconds === 0) return; 
-            const hoje = new Date().toLocaleDateString('pt-BR');
-            setSessions([{ id: Date.now().toString(), tempo: sToT(seconds), data: hoje }, ...safeSessions]); 
-            setSeconds(0); setIsActive(false); 
-          }} className="bg-zinc-800 py-6 rounded-3xl font-black text-xs text-white border border-zinc-700 active:scale-95 shadow-lg">
-            SALVAR
-          </button>
-        </div>
-        <button onClick={() => setShowHist(true)} className="mt-8 w-full text-zinc-600 font-black text-[10px] uppercase flex items-center justify-center gap-3 tracking-[0.3em] hover:text-red-600 transition-colors">
-          <BarChart3 size={14}/> AUDITORIA E ESTATÍSTICAS
-        </button>
-      </div>
+  // --- ESTADOS DE AUDITORIA MANUAL (CALENDÁRIO) ---
+  const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
+  const [manualTime, setManualTime] = useState('00:00:00');
 
-      {/* 2. SEÇÃO DE OBJETIVOS */}
-      <div className="bg-black p-8 rounded-[40px] border-b-8 border-zinc-800 shadow-2xl">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-white font-black italic text-xl uppercase flex items-center gap-3"><Target className="text-red-600" /> Objetivos</h2>
-          <button onClick={() => setIsFocusMode(true)} className="bg-zinc-900 text-white px-5 py-3 rounded-2xl text-[10px] font-black uppercase flex items-center gap-2 border border-zinc-800 shadow-lg"><Maximize2 size={14}/> MODO FOCO</button>
-        </div>
-        <div className="flex gap-2 mb-6">
-          <input type="text" value={newObj} onChange={(e) => setNewObj(e.target.value)} placeholder="Nova meta..." className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl px-6 text-white text-sm outline-none focus:border-red-600" />
-          <button onClick={() => { if(!newObj.trim()) return; if(editingObjId) { setObjectives(safeObjectives.map((o: any) => o.id === editingObjId ? { ...o, texto: newObj } : o)); setEditingObjId(null); } else { setObjectives([{id: Date.now().toString(), texto: newObj}, ...safeObjectives]); } setNewObj(''); }} className="bg-red-700 text-white p-5 rounded-2xl shadow-xl active:scale-90">
-            {editingObjId ? <Save size={24}/> : <Plus size={24}/>}
-          </button>
-        </div>
-        <div className="space-y-3">
-          {safeObjectives.map((obj: any) => (
-            <div key={obj.id} className="bg-zinc-900/40 p-5 rounded-3xl border border-zinc-800/50 flex justify-between items-center group">
-              <span className="text-zinc-300 text-sm italic font-bold">"{obj.texto}"</span>
-              <div className="flex gap-4">
-                <button onClick={() => { setEditingObjId(obj.id); setNewObj(obj.texto); }} className="text-blue-500 font-black text-[9px] uppercase">Editar</button>
-                <button onClick={() => setObjectives(safeObjectives.filter((o: any) => o.id !== obj.id))} className="text-red-600 font-black text-[9px] uppercase">Excluir</button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-      {/* 3. MEMORIAL DE LUTA (DIÁRIO PRIVADO) */}
+  // --- MOTORES DE CONVERSÃO DE TEMPO ---
+  const tToS = (t: string) => {
+    if (!t) return 0;
+    const p = t.split(':').map(Number);
+    if (p.length === 3) return p[0] * 3600 + p[1] * 60 + p[2];
+    if (p.length === 2) return p[0] * 60 + p[1];
+    return 0;
+  };
+
+  const sToT = (s: number) => {
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+  };
+
+  // --- MOTOR DE ESTATÍSTICAS (MENSAL / ANUAL) ---
+  const stats = useMemo(() => {
+    const agora = new Date();
+    const mes = (agora.getMonth() + 1).toString().padStart(2, '0');
+    const ano = agora.getFullYear().toString();
+    
+    const sMes = safeSessions.reduce((acc: number, i: any) => {
+      const p = i.data?.split('/') || [];
+      return (p[1] === mes && p[2] === ano) ? acc + tToS(i.tempo) : acc;
+    }, 0);
+    
+    const sAno = safeSessions.reduce((acc: number, i: any) => {
+      const p = i.data?.split('/') || [];
+      return (p[2] === ano) ? acc + tToS(i.tempo) : acc;
+    }, 0);
+
+    const agrupado = safeSessions.reduce((acc: any, i: any) => {
+      if (!i.data) return acc;
+      acc[i.data] = (acc[i.data] || 0) + tToS(i.tempo);
+      return acc;
+    }, {});
+
+    const historyOrdenado = Object.keys(agrupado).map(data => ({
+      data,
+      tempo: sToT(agrupado[data]),
+      segundos: agrupado[data]
+    })).sort((a, b) => b.data.split('/').reverse().join('').localeCompare(a.data.split('/').reverse().join('')));
+
+    return { 
+      mensal: `${Math.floor(sMes/3600)}:${Math.floor((sMes%3600)/60).toString().padStart(2,'0')} hs`, 
+      anual: `${Math.floor(sAno/3600)}:${Math.floor((sAno%3600)/60).toString().padStart(2,'0')} hs`, 
+      mesNome: agora.toLocaleString('pt-BR', { month: 'long' }).toUpperCase(),
+      history: historyOrdenado
+    };
+  }, [safeSessions]);
+  {/* 3. MEMORIAL DE LUTA (DIÁRIO PRIVADO) */}
       <div className="bg-zinc-900 p-8 rounded-[40px] border-b-8 border-amber-600 shadow-2xl">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-white font-black italic text-xl flex items-center gap-3 uppercase text-amber-500">Memorial de Luta</h2>
@@ -224,10 +247,7 @@ const Monarca = ({
             <div className="max-w-5xl mx-auto flex flex-col items-center justify-center min-h-full gap-16 text-center">
               {safeObjectives.map((o: any) => (
                 <div key={o.id} className="w-full py-10 border-b border-zinc-900/30 last:border-0">
-                  <p 
-                    className="text-white font-black italic uppercase leading-tight tracking-tighter" 
-                    style={{ fontSize: 'clamp(2rem, 10vw, 8rem)' }}
-                  >
+                  <p className="text-white font-black italic uppercase leading-tight tracking-tighter" style={{ fontSize: 'clamp(2rem, 10vw, 8rem)' }}>
                     "{o.texto}"
                   </p>
                 </div>
@@ -253,23 +273,12 @@ const Monarca = ({
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
               <div className="space-y-2">
-                <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest ml-2">Escolher Data</label>
-                <input 
-                  type="date" 
-                  className="w-full bg-zinc-800 p-4 rounded-2xl text-sm font-bold text-white border border-zinc-700 outline-none focus:border-red-600 transition-all" 
-                  value={manualDate} 
-                  onChange={e => setManualDate(e.target.value)} 
-                />
+                <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest ml-2">Data</label>
+                <input type="date" className="w-full bg-zinc-800 p-4 rounded-2xl text-sm font-bold text-white border border-zinc-700 outline-none focus:border-red-600 transition-all" value={manualDate} onChange={e => setManualDate(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest ml-2">Tempo (HH:MM:SS)</label>
-                <input 
-                  type="text" 
-                  placeholder="00:00:00" 
-                  className="w-full bg-zinc-800 p-4 rounded-2xl text-sm font-bold text-white border border-zinc-700 outline-none focus:border-red-600 transition-all" 
-                  value={manualTime} 
-                  onChange={e => setManualTime(e.target.value)} 
-                />
+                <input type="text" placeholder="00:00:00" className="w-full bg-zinc-800 p-4 rounded-2xl text-sm font-bold text-white border border-zinc-700 outline-none focus:border-red-600 transition-all" value={manualTime} onChange={e => setManualTime(e.target.value)} />
               </div>
             </div>
             <button 
@@ -288,11 +297,11 @@ const Monarca = ({
           <div className="grid grid-cols-2 gap-4 mb-10 text-center">
             <div className="bg-zinc-900 p-8 rounded-[40px] border border-zinc-800 shadow-xl">
                 <p className="text-zinc-500 text-[9px] font-black uppercase mb-2">Este Mês</p>
-                <p className="text-3xl text-white font-black italic">{stats.mensal}</p>
+                <p className="text-3xl text-white font-black italic">{stats.monthly || stats.mensal}</p>
             </div>
             <div className="bg-zinc-900 p-8 rounded-[40px] border border-zinc-800 shadow-xl">
                 <p className="text-zinc-500 text-[9px] font-black uppercase mb-2">Este Ano</p>
-                <p className="text-3xl text-white font-black italic">{stats.anual}</p>
+                <p className="text-3xl text-white font-black italic">{stats.yearly || stats.anual}</p>
             </div>
           </div>
 
@@ -311,13 +320,8 @@ const Monarca = ({
                       window.scrollTo({ top: 0, behavior: 'smooth' });
                     }} 
                     className="bg-zinc-800 p-4 rounded-2xl text-blue-500 border border-zinc-700 active:scale-90 shadow-md"
-                  >
-                    <Edit3 size={20}/>
-                  </button>
-                  <button 
-                    onClick={() => { if(window.confirm('Excluir?')) setSessions(safeSessions.filter((x: any) => x.data !== h.data)) }} 
-                    className="bg-zinc-800 p-4 rounded-2xl text-red-600 border border-zinc-700 active:scale-90 shadow-md"
-                  >
+                  ><Edit3 size={20}/></button>
+                  <button onClick={() => { if(window.confirm('Excluir?')) setSessions(safeSessions.filter((x: any) => x.data !== h.data)) }} className="bg-zinc-800 p-4 rounded-2xl text-red-600 border border-zinc-700 active:scale-90 shadow-md">
                     <Trash2 size={20}/>
                   </button>
                 </div>
