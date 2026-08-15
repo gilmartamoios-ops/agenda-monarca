@@ -554,12 +554,12 @@ const Investments = () => {
 
                     <div className="mt-4 space-y-2 text-sm">
 
-                      <div className="flex justify-between gap-3">
+                      <div className="flex justify-between items-start gap-2 min-w-0">
                         <span className="text-zinc-500">
                           Retorno hipotético
                         </span>
 
-                        <strong className="dark:text-white">
+                        <strong className="dark:text-white shrink-0 text-right">
                           {formatPercent(
                             scenario.annualReturn
                           )}
@@ -571,7 +571,7 @@ const Investments = () => {
                           Total aportado
                         </span>
 
-                        <strong className="dark:text-white">
+                        <strong className="dark:text-white shrink-0 text-right">
                           {formatCurrency(
                             scenario.totalContributed
                           )}
