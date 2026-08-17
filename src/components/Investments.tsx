@@ -616,9 +616,9 @@ const Investments = () => {
             <div className="overflow-x-auto">
 
               <div
-                className="min-w-[900px] grid grid-cols-12 gap-2 items-end"
+               className="min-w-[1200px] flex items-end justify-between gap-6"
                 style={{
-                  height: '360px',
+                  height: '420px',
                 }}
               >
 
@@ -667,14 +667,12 @@ const Investments = () => {
                         className="flex flex-col items-center justify-end h-full"
                       >
 
-                        <div className="text-[10px] font-bold text-zinc-500 mb-2">
-                          {formatCurrency(
-                            point.value
-                          )}
-                        </div>
+                      <div className="text-[9px] font-bold text-zinc-500 mb-2 whitespace-nowrap [writing-mode:vertical-rl] rotate-180">
+  {formatCurrency(point.value)}
+</div>
 
                         <div
-                          className="w-10 bg-yellow-500 rounded-t-xl transition-all"
+                          className="w-12 bg-yellow-500 rounded-t-xl transition-all"
                           style={{
                          height: height + '%',
                             minHeight:
@@ -684,9 +682,9 @@ const Investments = () => {
                           }}
                         />
 
-                        <div className="text-[10px] text-zinc-500 mt-2">
-                          {point.month}m
-                        </div>
+                        <div className="text-[9px] text-zinc-500 mt-2 whitespace-nowrap font-bold">
+  Mês {point.month}
+</div>
 
                       </div>
                     );
