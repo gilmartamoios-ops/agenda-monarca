@@ -1139,7 +1139,7 @@ const Radar: React.FC = () => {
 
             {allIndicators.mercados
               .filter(indicator =>
-                ['Iene japonês', 'Dólar', 'Ouro', 'Bitcoin']
+               ['Yuan chinês', 'Dólar', 'Ouro', 'Prata', 'Bitcoin', 'Ibovespa']
                   .includes(indicator.name)
               )
               .map(
